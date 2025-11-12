@@ -22,6 +22,7 @@ public class ProductDaoJDBC implements ProductDao {
     @Override
     public void insert(Product product) {
         PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
         try {
             preparedStatement = connection.prepareStatement(
@@ -37,10 +38,10 @@ public class ProductDaoJDBC implements ProductDao {
             int rowsAffected = preparedStatement.executeUpdate();
 
             if (rowsAffected > 0) {
-                ResultSet rs = preparedStatement.getGeneratedKeys();
+                resultSet = preparedStatement.getGeneratedKeys();
 
-                if (rs.next()) {
-                    int id = rs.getInt(1);
+                if (resultSet.next()) {
+                    int id = resultSet.getInt(1);
                     product.setId(id);
                 }
             } else {
@@ -50,6 +51,7 @@ public class ProductDaoJDBC implements ProductDao {
         } catch (SQLException e) {
             throw new DbException(e.getMessage());
         } finally {
+            DB.closeResultSet(resultSet);
             DB.closePreparedStatement(preparedStatement);
         }
     }
@@ -72,9 +74,16 @@ public class ProductDaoJDBC implements ProductDao {
             resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
-                Category category = new Category();
-                category.setId(resultSet.getInt(5));
-                category.setName(resultSet.getString(6));
+                int idCategory = resultSet.getInt(5);
+                String nameCategory = resultSet.getString(6);
+
+                Category category = null;
+
+                if (idCategory > 0 && nameCategory != null) {
+                    category = new Category();
+                    category.setId(idCategory);
+                    category.setName(nameCategory);
+                }
 
                 Product product = new Product();
                 product.setId(resultSet.getInt(1));
@@ -113,15 +122,20 @@ public class ProductDaoJDBC implements ProductDao {
             Map<Integer, Category> categoryMap = new HashMap<>();
 
             while (resultSet.next()) {
-                int categoryId = resultSet.getInt(5);
+                int idCategory = resultSet.getInt(5);
+                String nameCategory = resultSet.getString(6);
 
-                Category category = categoryMap.get(categoryId);
+                Category category = null;
 
-                if (category == null) {
-                    category = new Category();
-                    category.setId(categoryId);
-                    category.setName(resultSet.getString(6));
-                    categoryMap.put(categoryId, category);
+                if (idCategory > 0 && nameCategory != null) {
+                    category = categoryMap.get(idCategory);
+
+                    if (category == null) {
+                        category = new Category();
+                        category.setId(idCategory);
+                        category.setName(resultSet.getString(6));
+                        categoryMap.put(idCategory, category);
+                    }
                 }
 
                 Product product = new Product();
@@ -159,7 +173,7 @@ public class ProductDaoJDBC implements ProductDao {
 
             int rowsAffected = preparedStatement.executeUpdate();
 
-            if (rowsAffected <= 0){
+            if (rowsAffected <= 0) {
                 throw new DbException("No product found with the given ID!");
             }
         } catch (SQLException e) {
@@ -179,7 +193,11 @@ public class ProductDaoJDBC implements ProductDao {
 
             preparedStatement.setInt(1, id);
 
-            preparedStatement.executeUpdate();
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new DbException("No product found with the given ID!");
+            }
         } catch (SQLException e) {
             throw new DbException(e.getMessage());
         } finally {

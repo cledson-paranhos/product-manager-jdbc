@@ -28,7 +28,7 @@ public class ProductView {
         int idCategory = sc.nextInt();
         Category category = new Category(idCategory, "", null);
 
-        sc.nextLine(); // limpar o buffer
+        sc.nextLine();
 
         System.out.print("Name product: ");
         String nameProduct = sc.nextLine();
